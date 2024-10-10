@@ -1,10 +1,15 @@
 package ru.netology;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -33,20 +38,35 @@ public class ClientHandler implements Runnable {
             }
 
             final var path = parts[1];
-            if (!Server.validPaths.contains(path)) {
+            final var pathParts = path.split("\\?");
+
+            // проверяем наличие параметров в строке и парсим, если они есть
+            if (pathParts.length > 1) {
+                final var params = pathParts[1];
+                getQueryParams(params);
+            }
+
+            if (!Server.validPaths.contains(pathParts[0])) {
                 sendNotFound(out);
                 return;
             }
 
             // special case for classic
-            if (path.equals("/classic.html")) {
+            if (pathParts[0].equals("/classic.html")) {
                 sendOkSpecial(out);
                 return;
             }
 
-            sendOk(out, path);
+            sendOk(out, pathParts[0]);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public void getQueryParams(String params) {
+        final var parsedParams = URLEncodedUtils.parse(params, StandardCharsets.UTF_8);
+        for (NameValuePair param : parsedParams) {
+            System.out.println(param.getName() + ": " + param.getValue());
         }
     }
 
